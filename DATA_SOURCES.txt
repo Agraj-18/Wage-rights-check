@@ -1,0 +1,42 @@
+WAGE & RIGHTS CHECKER  -  WHERE THE NUMBERS CAME FROM
+=====================================================
+
+None of these numbers come straight from a government gazette. They come from public
+websites that summarise the notifications. CHECK EVERY NUMBER on the official site of
+the state labour department before the demo, and fix min_wages.csv.
+
+Each row of min_wages.csv has a "confidence" label. The app shows a matching warning.
+
+  good        Tamil Nadu, listed on WageIndicator for 1 April 2026 (8 jobs).
+              Still shows "may be out of date" after about 6 months.
+  older       Tamil Nadu, listed on WageIndicator as valid in March 2026 (18 jobs).
+              These are probably a little lower than the April 2026 figures.
+  stand_in    Cracker / Fireworks Factory (Tamil Nadu). NO official fireworks rate was
+              found. The Match Manufacturing rate is used as a stand-in. Piece-rate work
+              (paid per 1000) cannot be checked exactly. Get the real rate from the
+              Tamil Nadu Labour Department.
+  disputed    Other states. Different websites gave DIFFERENT monthly figures
+              (for example Kerala unskilled: 13,500 to 18,200). The app keeps the lowest
+              and highest figure and compares the worker's pay with both.
+  indicative  Other states where only one website gave a figure.
+
+Other states (monthly, "main / big-city zone", divided by 26 to get a day):
+  Figures were collected from public summary websites in October 2026, including
+  compliance blogs and payroll sites. They often disagree and many have no clear date.
+  The states are: Uttar Pradesh, Bihar, Maharashtra, West Bengal, Rajasthan, Madhya
+  Pradesh, Gujarat, Karnataka, Andhra Pradesh, Telangana, Kerala, Odisha, Jharkhand,
+  Delhi, Haryana, Punjab.
+
+Not included on purpose
+  - Tamil Nadu shops & establishments by zone (A-D): the sources disagreed.
+  - Zone-wise rates for other states (only the main zone is used).
+  - Piece rates (for example beedi rolling, per 1000).
+
+Official places to check
+  - Tamil Nadu Labour Department: labour.tn.gov.in
+  - Your state's labour department website
+  - SAMADHAN portal: samadhan.labour.gov.in
+
+To add or fix a rate: open min_wages.csv and edit or add a row. Keep the column names.
+rate_low and rate_high are RUPEES PER DAY. If you only know a monthly figure, divide by 26.
+If you know the exact rate, put the same number in rate_low and rate_high.
