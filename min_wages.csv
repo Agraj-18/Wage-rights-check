@@ -1,9 +1,60 @@
-state,industry,zone,skill_category,basic_per_day,vda_per_day,total_per_day,effective_from,source
-Tamil Nadu,Granite Industry,All,General,130.26,439.19,569.45,2026-04-01,WageIndicator (check with TN Labour Dept)
-Tamil Nadu,Automobile Workshops,All,General,109.15,396.19,505.34,2026-04-01,WageIndicator (check with TN Labour Dept)
-Tamil Nadu,Appalam Manufactory,All,General,93.42,314.27,407.69,2026-04-01,WageIndicator (check with TN Labour Dept)
-Tamil Nadu,Electronics Industry,All,General,91.00,306.19,397.19,2026-04-01,WageIndicator (check with TN Labour Dept)
-Tamil Nadu,Oil Mills,All,General,83.00,312.50,395.50,2026-04-01,WageIndicator (check with TN Labour Dept)
-Tamil Nadu,Coir Industry,All,General,90.00,259.38,349.38,2026-04-01,WageIndicator (check with TN Labour Dept)
-Tamil Nadu,Agarbati Industry,All,General,69.73,249.38,319.11,2026-04-01,WageIndicator (check with TN Labour Dept)
-Tamil Nadu,Match Manufacturing,All,General,68.50,215.88,284.38,2026-04-01,WageIndicator (check with TN Labour Dept)
+state,industry,skill_category,rate_low,rate_high,effective_from,confidence,source,note
+Tamil Nadu,Cracker / Fireworks Factory,All,284.38,284.38,2026-04-01,stand_in,STAND-IN: Match Manufacturing rate. An official fireworks rate was not found.,Piece-rate (per 1000) work cannot be checked exactly.
+Tamil Nadu,Match Manufacturing,All,284.38,284.38,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Construction (Roads and Buildings),All,606.60,606.60,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Loading and Unloading,All,358.00,358.00,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Hotels and Restaurants,All,422.66,422.66,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Tailoring,All,233.38,233.38,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Power Loom,All,402.10,402.10,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Security Guards,All,482.35,482.35,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Bricks and Tiles,All,310.60,310.60,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,"Rice, Flour and Dal Mills",All,379.70,379.70,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Granite Industry,All,569.45,569.45,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Automobile Workshops,All,505.34,505.34,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Coir Industry,All,349.38,349.38,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Agarbati Industry,All,319.11,319.11,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Appalam Manufactory,All,407.69,407.69,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Electronics Industry,All,397.19,397.19,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Oil Mills,All,395.50,395.50,2026-04-01,good,WageIndicator Tamil Nadu (April 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Carpentry and Black Smith,All,537.54,537.54,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Printing Press,All,316.08,316.08,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Laundries and Washing Cloths,All,604.60,604.60,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Auto Rickshaw and Taxi,All,638.31,638.31,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Salt Pans,All,343.80,343.80,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Cotton Ginning and Pressing,All,403.54,403.54,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Sea Food Processing,All,347.27,347.27,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,General Engineering and Fabrication,All,400.46,400.46,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Food Processing,All,399.04,399.04,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Tamil Nadu,Bakeries and Biscuits,All,332.80,332.80,2026-03-01,older,WageIndicator Tamil Nadu (March 2026 listing). Check labour.tn.gov.in,
+Uttar Pradesh,General work,Unskilled,416.38,480.77,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Uttar Pradesh,General work,Skilled,501.54,501.54,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Bihar,General work,Unskilled,331.00,436.00,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Bihar,General work,Skilled,403.00,551.00,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Maharashtra,General work,Unskilled,546.77,563.00,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Maharashtra,General work,Skilled,636.00,636.00,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+West Bengal,General work,Unskilled,400.00,400.00,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+West Bengal,General work,Skilled,496.15,496.15,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Rajasthan,General work,Unskilled,285.00,410.31,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Rajasthan,General work,Skilled,516.00,516.00,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Madhya Pradesh,General work,Unskilled,403.85,403.85,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Madhya Pradesh,General work,Skilled,492.31,492.31,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Gujarat,General work,Unskilled,476.00,476.00,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Gujarat,General work,Skilled,563.62,563.62,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Karnataka,General work,Unskilled,530.77,938.73,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Karnataka,General work,Skilled,697.50,697.50,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Andhra Pradesh,General work,Unskilled,500.00,500.00,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Andhra Pradesh,General work,Skilled,623.08,623.08,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Telangana,General work,Unskilled,569.23,569.23,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Telangana,General work,Skilled,688.46,688.46,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Kerala,General work,Unskilled,519.23,700.00,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Kerala,General work,Skilled,673.08,847.00,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Odisha,General work,Unskilled,352.00,472.00,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Odisha,General work,Skilled,429.00,572.00,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Jharkhand,General work,Unskilled,343.00,501.92,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Jharkhand,General work,Skilled,417.00,693.92,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Delhi,General work,Unskilled,694.85,763.31,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Delhi,General work,Skilled,815.96,919.42,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Haryana,General work,Unskilled,488.00,488.00,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Haryana,General work,Skilled,590.77,590.77,,indicative,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Punjab,General work,Unskilled,379.00,546.15,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
+Punjab,General work,Skilled,460.00,673.08,,disputed,Public summary websites (searched Oct 2026). They disagree. Confirm with the state labour department.,Main (big-city) zone figures. Monthly rate / 26 days.
