@@ -3,6 +3,7 @@ Wage & Rights Checker  -  the web page (version 3).
 
 Run it with:   streamlit run app.py
 """
+import io
 import os
 
 import pandas as pd
@@ -76,9 +77,38 @@ st.caption(T("estimate_note"))
 
 
 # ---------------------------------------------------------------- data + helpers
+
+def read_csv_safe(path):
+    """
+    Read a CSV file even if it was saved in a different text format
+    (for example by Excel or Numbers). Tries several encodings.
+    If the file is missing or unreadable, returns None instead of crashing.
+    """
+    if not os.path.exists(path):
+        return None
+    raw = open(path, "rb").read()
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        encodings = ["utf-16"]
+    else:
+        encodings = ["utf-8-sig", "cp1252", "latin-1"]
+    for enc in encodings:
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            text = None
+    if text is None:
+        return None
+    try:
+        df = pd.read_csv(io.StringIO(text), keep_default_na=False)
+    except Exception:
+        return None
+    df.columns = [str(c).strip() for c in df.columns]
+    return df
+
 @st.cache_data
 def load_data():
-    df = pd.read_csv("min_wages.csv", keep_default_na=False)
+    df = read_csv_safe("min_wages.csv")
     df["rate_low"] = df["rate_low"].astype(float)
     df["rate_high"] = df["rate_high"].astype(float)
     return df
@@ -405,9 +435,9 @@ with tab_group:
 with tab_rights:
     st.subheader(T("channel_title"))
     link = ""
-    if os.path.exists("channels.csv"):
-        ch = pd.read_csv("channels.csv", keep_default_na=False)
-        found = ch[ch["language"] == lang]
+    ch = read_csv_safe("channels.csv")
+    if ch is not None and {"language", "invite_link"} <= set(ch.columns):
+        found = ch[ch["language"].astype(str).str.strip() == lang]
         if not found.empty:
             link = str(found.iloc[0]["invite_link"]).strip()
     if link:
@@ -416,8 +446,8 @@ with tab_rights:
         st.info(T("channel_soon"))
 
     st.subheader(T("updates_title"))
-    if os.path.exists("updates.csv"):
-        ups = pd.read_csv("updates.csv", keep_default_na=False)
+    ups = read_csv_safe("updates.csv")
+    if ups is not None and {"date", "language", "type", "text", "source"} <= set(ups.columns):
         ups = ups[(ups["language"] == lang) | (ups["type"] == "incident")].sort_values("date", ascending=False)
     else:
         ups = pd.DataFrame()
