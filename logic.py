@@ -199,7 +199,7 @@ def build_letter_text(worker_name, employer_name, place, state, industry,
         worker_name,
         "",
         "-----",
-        "Note: This letter was prepared with the Wage & Rights Checker. The amounts "
+        "Note: This letter was prepared with SahiPay. The amounts "
         "are estimates and should be checked against the official notification.",
     ]
     return "\n".join(lines)

@@ -1,8 +1,10 @@
 """
-Wage & Rights Checker  -  the web page (version 4: new look).
+SahiPay  -  the web page (version 4.2: new name and logo).
 
 Run it with:   streamlit run app.py
 """
+import base64
+import functools
 import html as htmllib
 import io
 import os
@@ -22,9 +24,37 @@ from logic import (MIN_GROUP_SIZE, OVERTIME_CHOICES, QUICK_AMOUNTS, QUICK_DAYS,
                    group_summary, money, money2, paid_total, rate_age_days)
 from storage import add_entry, load_entries
 
-APP_VERSION = "4.0 (new look)"
+APP_VERSION = "4.2 (SahiPay)"
 
-st.set_page_config(page_title="Wage & Rights Checker", page_icon="₹", layout="centered")
+BRAND = "#109C6B"      # SahiPay green (from the logo)
+NAVY = "#14223F"       # SahiPay navy (from the logo)
+
+
+@functools.lru_cache(maxsize=1)
+def load_brand():
+    """
+    Find logo.png (in the assets folder, or next to app.py) and prepare two small copies:
+    a data address for the page banner and a picture for the browser tab icon.
+    If the logo or the image tool is missing, the app still works with a plain rupee coin.
+    """
+    for path in ("assets/logo.png", "logo.png"):
+        if os.path.exists(path):
+            try:
+                from PIL import Image
+                img = Image.open(path).convert("RGBA")
+                banner = img.resize((132, 132), Image.LANCZOS)
+                buf = io.BytesIO()
+                banner.save(buf, format="PNG", optimize=True)
+                data_uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+                icon = img.resize((64, 64), Image.LANCZOS)
+                return data_uri, icon, path
+            except Exception:
+                return None, None, None
+    return None, None, None
+
+
+LOGO_URI, LOGO_ICON, LOGO_PATH = load_brand()
+st.set_page_config(page_title="SahiPay", page_icon=LOGO_ICON if LOGO_ICON is not None else "₹", layout="centered")
 
 # ---------------------------------------------------------------- language
 lang_choice = st.selectbox("🌐 Language / மொழி / भाषा / ಭಾಷೆ / ഭാഷ / భాష", list(LANGS.keys()), key="lang_choice")
@@ -96,7 +126,9 @@ header[data-testid="stHeader"] {background:transparent;}
 .coin {flex:none; margin-right:14px; width:54px; height:54px; line-height:54px; text-align:center; border-radius:50%;
        background:ACCENT; color:PRIMARY; font-size:1.8rem; font-weight:700;
        box-shadow:0 0 0 4px rgba(255,255,255,.35), 0 4px 10px rgba(0,0,0,.25);}
-.hero-t {font-size:1.5rem; font-weight:700; line-height:1.25;}
+.logo {flex:none; margin-right:14px; width:66px; height:66px; border-radius:50%; background:#fff;
+        box-shadow:0 0 0 3px rgba(255,255,255,.55), 0 4px 12px rgba(0,0,0,.28);}
+.hero-t {font-size:1.7rem; font-weight:800; letter-spacing:.02em; line-height:1.2;}
 .hero-s {margin-top:2px; opacity:.95; font-size:1rem;}
 .chips {display:flex; flex-wrap:wrap; margin-top:12px; position:relative; z-index:1;}
 .chips span {margin:0 8px 6px 0; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4); border-radius:999px;
@@ -179,14 +211,17 @@ div[role="radiogroup"] > label p {font-size:1rem;}
 """
 
 state_for_theme = st.session_state.get("sel_state", "Tamil Nadu")
-PRIMARY, ACCENT, PATTERN = THEMES.get(state_for_theme, THEMES["Tamil Nadu"])
+STATE_PRIMARY, ACCENT, PATTERN = THEMES.get(state_for_theme, THEMES["Tamil Nadu"])
+PRIMARY = BRAND
 st.markdown(
-    CSS.replace("PRIMARYDARK", darken(PRIMARY)).replace("PRIMARY", PRIMARY)
-       .replace("ACCENT", ACCENT).replace("PATTERN", pattern_css(PATTERN, PRIMARY, ACCENT)),
+    CSS.replace("PRIMARYDARK", darken(BRAND, 0.30)).replace("PRIMARY", BRAND)
+       .replace("ACCENT", ACCENT).replace("PATTERN", pattern_css(PATTERN, STATE_PRIMARY, ACCENT)),
     unsafe_allow_html=True,
 )
+logo_html = (f'<img class="logo" src="{LOGO_URI}" alt="SahiPay logo">' if LOGO_URI
+             else '<div class="coin">₹</div>')
 st.markdown(
-    f'<div class="hero"><div class="hero-in"><div class="coin">₹</div>'
+    f'<div class="hero"><div class="hero-in">{logo_html}'
     f'<div><div class="hero-t">{esc(T("title"))}</div><div class="hero-s">{esc(T("tagline"))}</div></div></div>'
     f'<div class="chips"><span>⏱ {esc(T("chip_fast"))}</span><span>🔒 {esc(T("chip_private"))}</span>'
     f'<span>✓ {esc(T("chip_free"))}</span></div></div><div class="border-strip"></div>',
@@ -429,13 +464,17 @@ with tab_check:
     st.caption(f"{T('source_label')}: {row['source']}{when}")
 
     age = rate_age_days(row["effective_from"])
+    is_general = row.get("scope", "") == "general"
     if conf == "stand_in":
         callout("warn", f"⚠ {esc(T('warn_standin'))}")
     elif conf == "disputed":
         callout("warn", f"⚠ {esc(T('warn_disputed'))}")
-        callout("info", f"ℹ {esc(T('warn_zone'))}")
+        if is_general:
+            callout("warn", f"⚠ {esc(T('warn_general'))}")
+        else:
+            callout("info", f"ℹ {esc(T('warn_zone'))}")
     elif conf == "indicative":
-        callout("info", f"ℹ {esc(T('warn_zone'))}")
+        callout("warn" if is_general else "info", f"{'⚠' if is_general else 'ℹ'} {esc(T('warn_general') if is_general else T('warn_zone'))}")
     elif conf == "older" or (age is not None and age > 183):
         callout("warn", f"⚠ {esc(T('warn_older'))}")
 
@@ -593,7 +632,7 @@ with tab_group:
     st.divider()
     st.markdown(f"### {T('chart_min_title')}: {state_label(lang, state)}")
     shown = state_rows.copy()
-    if (shown["rate_low"] == shown["rate_high"]).all():
+    if (shown["scope"] == "industry").all():
         shown["label"] = shown["industry"].map(lambda j: job_label(lang, j))
         shown = shown.sort_values("rate_high")
         fig2 = px.bar(shown, x="rate_high", y="label", orientation="h", text="rate_high",
@@ -601,14 +640,15 @@ with tab_group:
                       height=max(280, 26 * len(shown)))
         st.plotly_chart(style_chart(fig2, PRIMARY))
     else:
-        shown["Work"] = shown.apply(
-            lambda r: job_label(lang, r["industry"]) + " / " + T("skill_" + r["skill_category"]), axis=1)
+        shown = shown.drop_duplicates(subset=["skill_category"])
         st.dataframe(pd.DataFrame({
-            T("col_work"): shown["Work"],
+            T("col_work"): shown["skill_category"].map(lambda k: T("skill_" + k)),
             T("col_low"): shown["rate_low"].round(2),
             T("col_high"): shown["rate_high"].round(2),
         }), hide_index=True)
-        callout("warn", f"⚠ {esc(T('warn_disputed'))}")
+        callout("warn", f"⚠ {esc(T('warn_general'))}")
+        if (state_rows["confidence"] == "disputed").any():
+            callout("warn", f"⚠ {esc(T('warn_disputed'))}")
     st.caption(T("chart_min_note"))
 
 # =====================================================================================
@@ -656,9 +696,11 @@ with tab_rights:
 # =====================================================================================
 with tab_about:
     st.markdown(f"### {T('tab_about')}")
+    if LOGO_PATH:
+        st.image(LOGO_PATH, width=150)
     for i, icon in zip(range(1, 6), ["💡", "🧾", "🔒", "📊", "🌐"]):
         callout("info" if i != 4 else "warn", f"{icon} {esc(T(f'about_{i}'))}")
     st.caption("Python · Streamlit · pandas · Plotly · SQLite · fpdf2")
 
-st.markdown(f'<div class="foot">{esc(T("estimate_note"))}<br>App version {esc(APP_VERSION)}</div>',
+st.markdown(f'<div class="foot">SahiPay · {esc(T("estimate_note"))}<br>App version {esc(APP_VERSION)}</div>',
             unsafe_allow_html=True)
