@@ -24,9 +24,9 @@ from logic import (MIN_GROUP_SIZE, OVERTIME_CHOICES, QUICK_AMOUNTS, QUICK_DAYS,
                    group_summary, money, money2, paid_total, rate_age_days)
 from storage import add_entry, load_entries
 
-APP_VERSION = "5.1 (language buttons)"
+APP_VERSION = "4.2 (SahiPay)"
 
-BRAND = "#0B6B49"      # SahiPay green, darkened so white text on it passes contrast (6.5:1)
+BRAND = "#109C6B"      # SahiPay green (from the logo)
 NAVY = "#14223F"       # SahiPay navy (from the logo)
 
 
@@ -57,8 +57,7 @@ LOGO_URI, LOGO_ICON, LOGO_PATH = load_brand()
 st.set_page_config(page_title="SahiPay", page_icon=LOGO_ICON if LOGO_ICON is not None else "₹", layout="centered")
 
 # ---------------------------------------------------------------- language
-lang_choice = st.radio("Language", list(LANGS.keys()), key="lang_choice", horizontal=True,
-                       label_visibility="collapsed")
+lang_choice = st.selectbox("🌐 Language / மொழி / भाषा / ಭಾಷೆ / ഭാഷ / భాష", list(LANGS.keys()), key="lang_choice")
 lang = LANGS[lang_choice]
 
 
@@ -111,136 +110,103 @@ def pattern_css(kind, primary, accent):
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&family=Noto+Sans+Malayalam:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap');
-:root {color-scheme: light;}
-.stApp {background:#F2F8F5; color:#14223F;}
-.stApp p, .stApp label, .stApp li, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp input, .stApp textarea,
-.hero, .rc, .note, .step, .stepper, .upd, .mini, .join, .foot {font-family:'Noto Sans','Noto Sans Tamil','Noto Sans Devanagari','Noto Sans Kannada','Noto Sans Malayalam','Noto Sans Telugu',system-ui,sans-serif;}
-.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp p, .stApp label, .stApp li {color:#14223F;}
-[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {color:#3E4A63 !important; opacity:1 !important;}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&family=Noto+Sans+Malayalam:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap');
+.stApp p, .stApp label, .stApp li, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp input, .stApp textarea,
+.hero, .rc, .note, .step, .upd, .mini, .join {font-family:'Noto Sans','Noto Sans Tamil','Noto Sans Devanagari','Noto Sans Kannada','Noto Sans Malayalam','Noto Sans Telugu',system-ui,sans-serif;}
 #MainMenu, footer {visibility:hidden;}
 header[data-testid="stHeader"] {background:transparent;}
-.block-container {max-width:780px; padding-top:.8rem; padding-bottom:3rem;}
+.block-container {max-width:760px; padding-top:1.1rem; padding-bottom:3rem;}
 
-/* ---------- inputs ---------- */
-.stApp input, .stApp textarea {background:#FFFFFF !important; color:#14223F !important; border-radius:10px;}
-[data-baseweb="select"] > div {background:#FFFFFF !important; color:#14223F !important; border:2px solid #5B6B84 !important; border-radius:10px !important;}
-[data-baseweb="select"] * {color:#14223F !important;}
-[data-baseweb="popover"], [data-baseweb="popover"] ul, [data-baseweb="popover"] li {background:#FFFFFF !important; color:#14223F !important;}
-[data-baseweb="popover"] li:hover, [data-baseweb="popover"] li[aria-selected="true"] {background:#E3F3EC !important;}
-
-/* ---------- top banner ---------- */
-.hero {position:relative; overflow:hidden; color:#FFFFFF; padding:18px 18px 16px;
-       background:linear-gradient(120deg, #14223F 0%, #0B6B49 100%); border-radius:20px 20px 0 0;}
-.hero::after {content:""; position:absolute; right:-40px; top:-40px; width:170px; height:170px; border-radius:50%;
-              background:rgba(255,255,255,.07); box-shadow:0 0 0 22px rgba(255,255,255,.05), 0 0 0 46px rgba(255,255,255,.03);}
+/* ---- top banner ---- */
+.hero {position:relative; overflow:hidden; color:#fff; padding:18px 18px 16px;
+       background:linear-gradient(135deg, PRIMARY 0%, PRIMARYDARK 100%); border-radius:18px 18px 0 0;}
+.hero::after {content:""; position:absolute; right:-34px; top:-34px; width:150px; height:150px; border-radius:50%;
+              background:rgba(255,255,255,.07); box-shadow:0 0 0 20px rgba(255,255,255,.05), 0 0 0 42px rgba(255,255,255,.03);}
 .hero-in {display:flex; align-items:center; position:relative; z-index:1;}
-.logo {flex:none; margin-right:14px; width:70px; height:70px; border-radius:50%; background:#FFFFFF;
-       box-shadow:0 0 0 3px rgba(255,255,255,.6), 0 4px 12px rgba(0,0,0,.35);}
-.coin {flex:none; margin-right:14px; width:60px; height:60px; line-height:60px; text-align:center; border-radius:50%;
-       background:#FFFFFF; color:#0B6B49; font-size:1.9rem; font-weight:800;}
-.hero-t {font-size:1.9rem; font-weight:800; letter-spacing:.02em; line-height:1.15; color:#FFFFFF;}
-.hero-s {margin-top:3px; font-size:1.02rem; color:#FFFFFF;}
+.coin {flex:none; margin-right:14px; width:54px; height:54px; line-height:54px; text-align:center; border-radius:50%;
+       background:ACCENT; color:PRIMARY; font-size:1.8rem; font-weight:700;
+       box-shadow:0 0 0 4px rgba(255,255,255,.35), 0 4px 10px rgba(0,0,0,.25);}
+.logo {flex:none; margin-right:14px; width:66px; height:66px; border-radius:50%; background:#fff;
+        box-shadow:0 0 0 3px rgba(255,255,255,.55), 0 4px 12px rgba(0,0,0,.28);}
+.hero-t {font-size:1.7rem; font-weight:800; letter-spacing:.02em; line-height:1.2;}
+.hero-s {margin-top:2px; opacity:.95; font-size:1rem;}
 .chips {display:flex; flex-wrap:wrap; margin-top:12px; position:relative; z-index:1;}
-.chips span {margin:0 8px 6px 0; background:rgba(255,255,255,.14); border:1.5px solid rgba(255,255,255,.7);
-             border-radius:999px; padding:3px 11px; font-size:.84rem; color:#FFFFFF; font-weight:600;}
-.border-strip {height:18px; margin-bottom:12px; border-radius:0 0 20px 20px; background-color:ACCENT;
+.chips span {margin:0 8px 6px 0; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4); border-radius:999px;
+             padding:3px 11px; font-size:.82rem;}
+.border-strip {height:18px; margin-bottom:16px; border-radius:0 0 18px 18px; background-color:ACCENT;
                background-image:PATTERN; background-repeat:repeat-x; background-position:center;}
 
-/* ---------- little progress guide ---------- */
-.stepper {display:flex; flex-wrap:wrap; margin:0 0 10px;}
-.stepper span {margin:0 6px 6px 0; background:#FFFFFF; border:2px solid #14223F; border-radius:999px;
-               padding:3px 12px 3px 4px; font-weight:700; font-size:.84rem; color:#14223F;}
-.stepper b {display:inline-block; width:22px; height:22px; line-height:22px; text-align:center; border-radius:50%;
-            background:#14223F; color:#FFFFFF; margin-right:6px; font-size:.8rem;}
+/* ---- tabs ---- */
+button[data-baseweb="tab"] {font-size:.98rem; font-weight:600; padding:10px 10px;}
+button[data-baseweb="tab"][aria-selected="true"] {color:PRIMARY;}
+div[data-baseweb="tab-highlight"] {background-color:PRIMARY;}
 
-/* ---------- tabs ---------- */
-div[data-baseweb="tab-list"] {background:#FFFFFF; padding:5px; border-radius:14px; border:2px solid #5B6B84; flex-wrap:wrap;}
-button[data-baseweb="tab"] {border-radius:10px; padding:8px 11px; font-weight:700; background:transparent;}
-button[data-baseweb="tab"] p {color:#14223F; font-weight:700; font-size:.95rem;}
-button[data-baseweb="tab"][aria-selected="true"] {background:#14223F;}
-button[data-baseweb="tab"][aria-selected="true"] p, button[data-baseweb="tab"][aria-selected="true"] * {color:#FFFFFF !important;}
-div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {display:none;}
+/* ---- step headers ---- */
+.step {display:flex; align-items:center; margin:4px 0 6px;}
+.step-n {flex:none; margin-right:10px; width:32px; height:32px; border-radius:50%; background:PRIMARY; color:#fff; font-weight:700;
+         display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.step-t {font-weight:700; font-size:1.12rem;}
 
-/* ---------- cards ---------- */
-[data-testid="stVerticalBlockBorderWrapper"] {background:#FFFFFF; border-radius:18px;
-        border:2px solid #7A8CA0 !important; box-shadow:0 3px 10px rgba(20,34,63,.10);}
-.step {display:flex; align-items:center; margin:2px 0 10px; padding-bottom:6px; border-bottom:3px solid ACCENT;}
-.step-n {flex:none; margin-right:10px; width:34px; height:34px; border-radius:50%; background:#0B6B49; color:#FFFFFF;
-         font-weight:800; display:flex; align-items:center; justify-content:center;}
-.step-t {font-weight:800; font-size:1.18rem; color:#14223F;}
-
-/* ---------- answer pills ---------- */
-div[role="radiogroup"] {flex-wrap:wrap;}
-div[role="radiogroup"] > label {border:2px solid #5B6B84; border-radius:999px; padding:7px 15px; margin:0 8px 8px 0;
-        background:#FFFFFF; cursor:pointer;}
-div[role="radiogroup"] > label:hover {border-color:#14223F; background:#E3F3EC;}
+/* ---- answer buttons look like pills ---- */
+div[role="radiogroup"] {gap:8px; flex-wrap:wrap;}
+div[role="radiogroup"] > label {border:1.5px solid rgba(120,120,120,.45); border-radius:999px; padding:7px 15px;
+        background:#FFFFFF; color:#2B1B17; cursor:pointer; margin:0;}
+div[role="radiogroup"] > label:hover {border-color:PRIMARY;}
 div[role="radiogroup"] > label > div:first-child {display:none;}
-div[role="radiogroup"] > label p {font-size:1rem; font-weight:600; color:#14223F;}
-div[role="radiogroup"] > label:has(input:checked) {background:#0B6B49; border-color:#0B6B49; box-shadow:0 2px 8px rgba(0,0,0,.25);}
-div[role="radiogroup"] > label:has(input:checked) *, div[role="radiogroup"] > label:has(input:checked) p {color:#FFFFFF !important;}
+div[role="radiogroup"] > label:has(input:checked) {background:PRIMARY; border-color:PRIMARY; box-shadow:0 2px 8px rgba(0,0,0,.2);}
+div[role="radiogroup"] > label:has(input:checked) * {color:#FFFFFF !important;}
+div[role="radiogroup"] > label p {font-size:1rem;}
 
-/* ---------- buttons ---------- */
-.stButton > button, .stDownloadButton > button {width:100%; border-radius:12px; font-size:1.05rem; font-weight:700;
-        padding:.7rem 1rem; background:#0B6B49; border:2px solid #0B6B49;}
-.stButton > button p, .stDownloadButton > button p {color:#FFFFFF !important; font-weight:700;}
-.stButton > button:hover, .stDownloadButton > button:hover {background:#14223F; border-color:#14223F;}
-.stButton > button:disabled {background:#DCE5E0; border-color:#DCE5E0;}
-.stButton > button:disabled p {color:#3E4A63 !important;}
+/* ---- big buttons ---- */
+.stButton > button, .stDownloadButton > button {width:100%; border-radius:12px; font-size:1.05rem; font-weight:600;
+        padding:.7rem 1rem; border:2px solid PRIMARY; color:PRIMARY; background:#FFFFFF;}
+.stButton > button:hover, .stDownloadButton > button:hover {background:PRIMARY; color:#FFFFFF; border-color:PRIMARY;}
+.stButton > button:disabled {opacity:.55;}
+[data-testid="stVerticalBlockBorderWrapper"] {border-radius:16px;}
 
-/* ---------- result: a pay-slip ---------- */
-.rc {position:relative; background:#FFFFFF; color:#14223F; border:2px solid #14223F; border-radius:18px;
-     padding:0 18px 14px; margin:10px 0 14px; box-shadow:0 6px 16px rgba(20,34,63,.18); overflow:hidden;}
-.rc-head {margin:0 -18px 10px; padding:9px 18px; background:#14223F; color:#FFFFFF; font-size:.85rem; font-weight:700;
-          letter-spacing:.08em; text-transform:uppercase;}
-.rc-amount {font-size:2.8rem; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; margin:4px 0 6px;}
-.rc-under .rc-amount {color:#B3261E;}
-.rc-fine .rc-amount {color:#0B6B49;}
-.rc-unclear .rc-amount {color:#8A4B00;}
-.rc-msg {padding:9px 12px; border-radius:12px; font-weight:700; font-size:1.02rem; margin-right:92px;}
-.rc-under .rc-msg {background:#FDECEA; color:#5C0F0A;}
-.rc-fine .rc-msg {background:#E4F5EC; color:#0B3B28;}
-.rc-unclear .rc-msg {background:#FFF4D6; color:#4A3300;}
-.stamp {position:absolute; right:16px; top:50px; transform:rotate(-9deg); background:#FFFFFF; border:3px solid; border-radius:8px;
-        padding:2px 10px; font-weight:800; font-size:1.05rem; letter-spacing:.06em; text-transform:uppercase;}
-.rc-under .stamp {color:#B3261E; border-color:#B3261E;}
-.rc-fine .stamp {color:#0B6B49; border-color:#0B6B49;}
-.rc-unclear .stamp {color:#8A4B00; border-color:#8A4B00;}
-.rc-bar {height:14px; background:#DCE5E0; border-radius:999px; margin:14px 0 4px; overflow:hidden;}
-.rc-bar div {height:100%; border-radius:999px; background:#14223F;}
-.rc-pct {font-size:.9rem; font-weight:600; color:#3E4A63;}
-.rc-rows {margin-top:10px;}
-.rc-row {display:flex; justify-content:space-between; padding:8px 0; border-bottom:2px dashed #7A8CA0; font-size:1rem;}
-.rc-row b {font-variant-numeric:tabular-nums;}
-.rc-row.total {border-bottom:none; font-size:1.12rem; font-weight:800;}
+/* ---- result card ---- */
+.rc {border-radius:18px; padding:16px 18px 14px; margin:8px 0 12px; box-shadow:0 4px 14px rgba(0,0,0,.12);}
+.rc-under {background:#FFF1EC; color:#4A1D12; border-left:9px solid #C8553D;}
+.rc-fine {background:#EAF6EF; color:#123B2B; border-left:9px solid #2E7D5B;}
+.rc-unclear {background:#FFF6E3; color:#4A3300; border-left:9px solid #F2A541;}
+.rc-top {font-size:.85rem; letter-spacing:.04em; text-transform:uppercase; opacity:.75; font-weight:600;}
+.rc-amount {font-size:2.5rem; font-weight:800; line-height:1.15; margin:2px 0;}
+.rc-msg {font-size:1.02rem; font-weight:600;}
+.rc-bar {height:12px; background:rgba(0,0,0,.12); border-radius:999px; margin:12px 0 4px; overflow:hidden;}
+.rc-bar div {height:100%; border-radius:999px; background:PRIMARY;}
+.rc-pct {font-size:.88rem; opacity:.85;}
+.rc-grid {display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px;}
+.rc-grid div {background:rgba(255,255,255,.75); border-radius:12px; padding:8px 10px;}
+.rc-grid small {display:block; font-size:.74rem; opacity:.75;}
+.rc-grid b {font-size:1.02rem;}
 
-/* ---------- small totals ---------- */
+/* ---- little totals cards ---- */
 .mini-grid {display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:8px 0;}
-.mini {background:#FFFFFF; color:#14223F; border-radius:14px; padding:10px 12px; border:2px solid #7A8CA0; border-top:6px solid #0B6B49;}
-.mini small {display:block; font-size:.78rem; font-weight:600; color:#3E4A63;}
-.mini b {font-size:1.2rem; font-variant-numeric:tabular-nums;}
-.mini-bad {border-top-color:#B3261E;}
+.mini {background:#FFFFFF; color:#2B1B17; border-radius:14px; padding:10px 12px; border-top:5px solid PRIMARY;
+       box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.mini small {display:block; font-size:.76rem; opacity:.75;}
+.mini b {font-size:1.2rem;}
+.mini-bad {border-top-color:#C8553D;}
 
-/* ---------- notes ---------- */
-.note {border-radius:12px; padding:10px 14px; margin:8px 0; font-size:.96rem; line-height:1.5; border:2px solid;}
+/* ---- notes ---- */
+.note {border-radius:12px; padding:10px 14px; margin:8px 0; font-size:.95rem; line-height:1.5;}
 .note ul {margin:6px 0 2px 1.1rem; padding:0;}
-.note li, .note b {color:inherit !important;}
-.note-warn {background:#FFF4D6; color:#4A3300; border-color:#8A4B00;}
-.note-info {background:#E6EEF9; color:#0F2A4D; border-color:#3B5B8F;}
-.note-ok {background:#E4F5EC; color:#0B3B28; border-color:#0B6B49;}
+.note-warn {background:#FFF6E3; color:#4A3300; border:1px solid #F2C97A;}
+.note-info {background:#EAF1FA; color:#12304F; border:1px solid #B7CDE8;}
+.note-ok {background:#EAF6EF; color:#123B2B; border:1px solid #A9D6BC;}
 
-/* ---------- updates + join button ---------- */
-.join {display:block; text-align:center; text-decoration:none !important; color:#FFFFFF !important; font-weight:800;
-       background:#0B6B49; padding:13px 16px; border-radius:14px; border:2px solid #14223F; margin:6px 0 4px;}
-.upd {background:#FFFFFF; color:#14223F; border-radius:14px; padding:12px 14px; margin:10px 0; border:2px solid #7A8CA0;
-      border-left:8px solid ACCENT;}
-.upd .badge {display:inline-block; font-size:.76rem; font-weight:800; border-radius:999px; padding:2px 10px;
-             background:#0B6B49; color:#FFFFFF; margin-right:8px;}
-.upd .badge-incident {background:#B3261E;}
-.upd .when {font-size:.82rem; font-weight:600; color:#3E4A63;}
-.upd p {margin:6px 0 2px; font-size:1rem; line-height:1.55; color:#14223F;}
-.upd .src {font-size:.8rem; color:#3E4A63; word-break:break-all;}
-.foot {text-align:center; font-size:.82rem; font-weight:600; color:#3E4A63; margin-top:10px;}
+/* ---- updates + join button ---- */
+.join {display:block; text-align:center; text-decoration:none !important; color:#FFFFFF !important; font-weight:700;
+       background:#1FA855; padding:12px 16px; border-radius:14px; box-shadow:0 3px 10px rgba(0,0,0,.2); margin:6px 0 4px;}
+.upd {background:#FFFFFF; color:#2B1B17; border-radius:14px; padding:12px 14px; margin:10px 0;
+      border-left:7px solid ACCENT; box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.upd .badge {display:inline-block; font-size:.75rem; font-weight:700; border-radius:999px; padding:2px 10px;
+             background:PRIMARY; color:#fff; margin-right:8px;}
+.upd .badge-incident {background:#C8553D;}
+.upd .when {font-size:.8rem; opacity:.7;}
+.upd p {margin:6px 0 2px; font-size:1rem; line-height:1.55;}
+.upd .src {font-size:.78rem; opacity:.65; word-break:break-all;}
+.foot {text-align:center; font-size:.8rem; opacity:.7; margin-top:10px;}
 </style>
 """
 
@@ -248,7 +214,8 @@ state_for_theme = st.session_state.get("sel_state", "Tamil Nadu")
 STATE_PRIMARY, ACCENT, PATTERN = THEMES.get(state_for_theme, THEMES["Tamil Nadu"])
 PRIMARY = BRAND
 st.markdown(
-    CSS.replace("ACCENT", ACCENT).replace("PATTERN", pattern_css(PATTERN, STATE_PRIMARY, ACCENT)),
+    CSS.replace("PRIMARYDARK", darken(BRAND, 0.30)).replace("PRIMARY", BRAND)
+       .replace("ACCENT", ACCENT).replace("PATTERN", pattern_css(PATTERN, STATE_PRIMARY, ACCENT)),
     unsafe_allow_html=True,
 )
 logo_html = (f'<img class="logo" src="{LOGO_URI}" alt="SahiPay logo">' if LOGO_URI
@@ -257,9 +224,7 @@ st.markdown(
     f'<div class="hero"><div class="hero-in">{logo_html}'
     f'<div><div class="hero-t">{esc(T("title"))}</div><div class="hero-s">{esc(T("tagline"))}</div></div></div>'
     f'<div class="chips"><span>⏱ {esc(T("chip_fast"))}</span><span>🔒 {esc(T("chip_private"))}</span>'
-    f'<span>✓ {esc(T("chip_free"))}</span></div></div><div class="border-strip"></div>'
-    f'<div class="stepper"><span><b>1</b>{esc(T("step1"))}</span><span><b>2</b>{esc(T("step2"))}</span>'
-    f'<span><b>3</b>{esc(T("step3"))}</span><span><b>4</b>{esc(T("result_title"))}</span></div>',
+    f'<span>✓ {esc(T("chip_free"))}</span></div></div><div class="border-strip"></div>',
     unsafe_allow_html=True,
 )
 
@@ -478,19 +443,15 @@ with tab_check:
     else:
         big, msg, missing_txt = "?", T("msg_unclear"), "?"
     kind = {"under": "under", "fine": "fine", "unclear": "unclear"}[verdict]
-    stamp = {"under": T("res_missing"), "fine": "✓", "unclear": "?"}[verdict]
     st.markdown(
         f'<div class="rc rc-{kind}" data-verdict="{kind}" data-should="{esc(should_txt)}" data-missing="{esc(missing_txt)}">'
-        f'<div class="rc-head">₹ {esc(T("result_title"))}</div>'
-        f'<div class="stamp">{esc(stamp)}</div>'
+        f'<div class="rc-top">{esc(T("result_title"))}</div>'
         f'<div class="rc-amount">{esc(big)}</div><div class="rc-msg">{esc(msg)}</div>'
         f'<div class="rc-bar"><div style="width:{pct_got:.0f}%"></div></div>'
         f'<div class="rc-pct">{esc(T("pct_got", pct=f"{pct_got:.0f}"))}</div>'
-        f'<div class="rc-rows">'
-        f'<div class="rc-row"><span>{esc(T("res_should"))}</span><b>{esc(should_txt)}</b></div>'
-        f'<div class="rc-row"><span>{esc(T("res_got"))}</span><b>{esc(money(paid))}</b></div>'
-        f'<div class="rc-row total"><span>{esc(T("res_missing"))}</span><b>{esc(missing_txt)}</b></div>'
-        f'</div></div>',
+        f'<div class="rc-grid"><div><small>{esc(T("res_should"))}</small><b>{esc(should_txt)}</b></div>'
+        f'<div><small>{esc(T("res_got"))}</small><b>{esc(money(paid))}</b></div>'
+        f'<div><small>{esc(T("res_missing"))}</small><b>{esc(missing_txt)}</b></div></div></div>',
         unsafe_allow_html=True,
     )
 
