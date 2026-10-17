@@ -3,6 +3,8 @@ logic.py  -  the "brain" of the app (plain Python, no web page stuff).
 
 Keeping the maths here, away from the web page, makes it easy to test.
 """
+import re
+import unicodedata
 from datetime import date, datetime
 
 import pandas as pd
@@ -229,3 +231,123 @@ def group_summary(entries, min_group=MIN_GROUP_SIZE):
     shown["avg_missing_percent"] = shown["avg_missing_percent"].round(1)
     shown["share_underpaid"] = shown["share_underpaid"].round(0)
     return shown, hidden
+
+
+# ---------------- voice: turn what the worker SAYS into a number ----------------
+_ENGLISH_WORDS = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
+}
+_MULT = {"hundred": 100, "thousand": 1000, "lakh": 100000, "lac": 100000}
+# words that mean "thousand / lakh / hundred" in the six languages (used after a spoken digit, e.g. "9 thousand")
+_THOUSAND = ("thousand", "हज़ार", "हजार", "ஆயிரம்", "ஆயிரம", "ಸಾವಿರ", "ആയിരം", "వెయ్యి", "వేల")
+_LAKH = ("lakh", "lac", "लाख", "லட்சம்", "லட்ச", "ಲಕ್ಷ", "ലക്ഷം", "లక్ష")
+_HUNDRED = ("hundred", "सौ", "நூறு", "ನೂರು", "നൂറ്", "వంద")
+_ZERO_WORDS = ("zero", "none", "nothing", "nil", "no ", "नहीं", "नही", "शून्य", "जीरो", "इंपॉसिबल",
+               "இல்லை", "பூஜ்ஜியம்", "சுழியம்", "లేదు", "సున్నా", "ಇಲ್ಲ", "ಸೊನ್ನೆ", "ഇല്ല", "പൂജ്യം")
+
+
+def _ascii_digits(text):
+    """Turn Tamil, Hindi, Telugu, Kannada and Malayalam digits into 0-9."""
+    out = []
+    for ch in text:
+        try:
+            out.append(str(unicodedata.digit(ch)) if not ch.isascii() else ch)
+        except (TypeError, ValueError):
+            out.append(ch)
+    return "".join(out)
+
+
+def parse_number(text):
+    """
+    Find the number in what the worker said. Returns a number, or None if there is none.
+    Understands: digits ("26", "9,000", "९०००"), "9 thousand" / "9 हज़ार", English words
+    ("twenty six", "nine thousand five hundred"), and "none / no / नहीं / இல்லை..." as zero.
+    """
+    if text is None:
+        return None
+    t = _ascii_digits(str(text)).lower().strip()
+    if not t:
+        return None
+    # 1. digits (with optional commas and decimals)
+    m = re.search(r"\d[\d,]*(?:\.\d+)?", t)
+    if m:
+        value = float(m.group(0).replace(",", ""))
+        rest = t[m.end():]
+        if any(w in rest for w in _LAKH):
+            value *= 100000
+        elif any(w in rest for w in _THOUSAND):
+            value *= 1000
+        elif any(w in rest for w in _HUNDRED):
+            value *= 100
+        return int(value) if float(value).is_integer() else value
+    # 2. English number words
+    tokens = re.findall(r"[a-z]+", t.replace("-", " "))
+    total, current, found = 0, 0, False
+    for tok in tokens:
+        if tok in _ENGLISH_WORDS:
+            current += _ENGLISH_WORDS[tok]; found = True
+        elif tok in _MULT:
+            found = True
+            if tok == "hundred":
+                current = max(current, 1) * 100
+            else:
+                total += max(current, 1) * _MULT[tok]; current = 0
+    if found:
+        return total + current
+    # 3. "none / no" in any of the six languages means zero
+    if any(w in (t + " ") for w in _ZERO_WORDS):
+        return 0
+    return None
+
+
+# ---------------- voice: match what the worker SAYS to one of the choices ----------------
+import difflib
+
+
+def _norm(text):
+    """lower case, no spaces or punctuation (works for Indian scripts too)."""
+    text = unicodedata.normalize("NFKC", str(text)).lower()
+    return "".join(ch for ch in text if ch.isalnum() or unicodedata.category(ch).startswith("M"))
+
+
+def _tokens(label):
+    parts = re.split(r"[\s/,()\-]+", unicodedata.normalize("NFKC", str(label)).lower())
+    return [_norm(p) for p in parts if len(_norm(p)) >= 3]
+
+
+def match_choice(heard, candidates, threshold=0.6):
+    """
+    heard      what the worker said (text)
+    candidates a list of (value, [names the worker might say, in any language])
+    Returns (value, score) for the best match, or (None, score) when there is no clear winner.
+    """
+    h = _norm(heard)
+    if len(h) < 2:
+        return None, 0.0
+    scored = []
+    for value, labels in candidates:
+        best = 0.0
+        for label in labels:
+            n = _norm(label)
+            if not n:
+                continue
+            if h == n:
+                best = max(best, 1.0)
+            elif len(h) >= 3 and (h in n or n in h):
+                best = max(best, 0.9)                       # said the whole name, or a clear part of it
+            for tok in _tokens(label):
+                if len(h) >= 3 and (h == tok or h in tok or tok in h):
+                    best = max(best, 0.85)                  # said one of the words in the name
+            best = max(best, difflib.SequenceMatcher(None, h, n).ratio())
+        scored.append((best, value))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_score, top_value = scored[0]
+    second = scored[1][0] if len(scored) > 1 else 0.0
+    if top_score < threshold:
+        return None, top_score
+    if top_score < 0.95 and (top_score - second) < 0.04:
+        return None, top_score                              # two choices look equally good: do not guess
+    return top_value, top_score

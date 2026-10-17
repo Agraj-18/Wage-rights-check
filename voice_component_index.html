@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {margin:0; font-family: 'Noto Sans','Noto Sans Tamil','Noto Sans Devanagari','Noto Sans Kannada','Noto Sans Malayalam','Noto Sans Telugu',system-ui,sans-serif;}
+  button {width:100%; padding:14px 16px; font-size:18px; font-weight:700; border-radius:14px; border:2px solid #14223F;
+          background:#0B6B49; color:#FFFFFF; cursor:pointer;}
+  button.listening {background:#B3261E; border-color:#5C0F0A;}
+  #msg {margin-top:8px; font-size:15px; font-weight:600; color:#14223F; min-height:20px;}
+</style>
+</head>
+<body>
+<button id="mic" type="button"><span id="icon">🎤</span> <span id="lbl">Tap and speak</span></button>
+<div id="msg"></div>
+<script>
+(function () {
+  // --- the small protocol every Streamlit component uses (no extra tools needed) ---
+  function send(type, extra) {
+    window.parent.postMessage(Object.assign({isStreamlitMessage: true, type: type}, extra || {}), "*");
+  }
+  function sendValue(v) {
+    v.nonce = Date.now() + Math.random();          // a new number every time, so Python knows it is a new answer
+    send("streamlit:setComponentValue", {value: v, dataType: "json"});
+  }
+
+  var args = {lang: "en-IN", tap: "Tap and speak", listening: "Listening... speak now",
+              unsupported: "Voice input does not work in this browser."};
+  var mic = document.getElementById("mic");
+  var lbl = document.getElementById("lbl");
+  var msg = document.getElementById("msg");
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var rec = null, active = false;
+
+  function refresh() {
+    lbl.textContent = active ? args.listening : args.tap;
+    mic.className = active ? "listening" : "";
+  }
+
+  mic.addEventListener("click", function () {
+    if (!SR) { msg.textContent = args.unsupported; sendValue({unsupported: true}); return; }
+    if (active && rec) { rec.stop(); return; }
+    rec = new SR();
+    rec.lang = args.lang;
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.continuous = false;
+    rec.onstart = function () { active = true; refresh(); msg.textContent = ""; };
+    rec.onresult = function (e) {
+      var text = e.results[0][0].transcript;
+      msg.textContent = "\u201C" + text + "\u201D";
+      sendValue({text: text});
+    };
+    rec.onerror = function (e) { active = false; refresh(); sendValue({error: (e && e.error) || "error"}); };
+    rec.onend = function () { active = false; refresh(); };
+    try { rec.start(); } catch (err) { sendValue({error: "start-failed"}); }
+  });
+
+  window.addEventListener("message", function (event) {
+    var d = event.data;
+    if (d && d.type === "streamlit:render") {
+      args = Object.assign(args, d.args || {});
+      refresh();
+    }
+  });
+
+  send("streamlit:componentReady", {apiVersion: 1});
+  send("streamlit:setFrameHeight", {height: 96});
+  refresh();
+})();
+</script>
+</body>
+</html>

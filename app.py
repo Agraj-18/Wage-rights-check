@@ -7,6 +7,7 @@ import base64
 import functools
 import html as htmllib
 import io
+import json
 import os
 import re
 import unicodedata
@@ -15,18 +16,19 @@ from urllib.parse import quote
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 from fpdf import FPDF
 
 from demo_data import make_demo_entries
-from i18n import LANGS, job_label, state_label, t
+from i18n import LANGS, ORDER, job_label, state_label, t
 from logic import (MIN_GROUP_SIZE, OVERTIME_CHOICES, QUICK_AMOUNTS, QUICK_DAYS,
                    build_letter_text, calc_range, calculate, clean_for_pdf,
-                   group_summary, money, money2, paid_total, rate_age_days)
+                   group_summary, match_choice, money, money2, paid_total, parse_number, rate_age_days)
 from storage import add_entry, load_entries
 
-APP_VERSION = "4.2 (SahiPay)"
+APP_VERSION = "6.1 (voice for state and work)"
 
-BRAND = "#109C6B"      # SahiPay green (from the logo)
+BRAND = "#0B6B49"      # SahiPay green, darkened so white text on it passes contrast (6.5:1)
 NAVY = "#14223F"       # SahiPay navy (from the logo)
 
 
@@ -57,7 +59,8 @@ LOGO_URI, LOGO_ICON, LOGO_PATH = load_brand()
 st.set_page_config(page_title="SahiPay", page_icon=LOGO_ICON if LOGO_ICON is not None else "₹", layout="centered")
 
 # ---------------------------------------------------------------- language
-lang_choice = st.selectbox("🌐 Language / மொழி / भाषा / ಭಾಷೆ / ഭാഷ / భాష", list(LANGS.keys()), key="lang_choice")
+lang_choice = st.radio("Language", list(LANGS.keys()), key="lang_choice", horizontal=True,
+                       label_visibility="collapsed")
 lang = LANGS[lang_choice]
 
 
@@ -67,6 +70,14 @@ def T(key, **kw):
 
 def esc(x):
     return htmllib.escape(str(x), quote=True)
+
+
+# A state or work picked by voice arrives one step late, so it is applied here, before the boxes are drawn.
+if "pending_state" in st.session_state:
+    st.session_state["sel_state"] = st.session_state.pop("pending_state")
+if "pending_job" in st.session_state:
+    _pending_state, _pending_job = st.session_state.pop("pending_job")
+    st.session_state[f"sel_job_{_pending_state}"] = _pending_job
 
 
 # ---------------------------------------------------------------- regional look
@@ -110,103 +121,136 @@ def pattern_css(kind, primary, accent):
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&family=Noto+Sans+Malayalam:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap');
-.stApp p, .stApp label, .stApp li, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp input, .stApp textarea,
-.hero, .rc, .note, .step, .upd, .mini, .join {font-family:'Noto Sans','Noto Sans Tamil','Noto Sans Devanagari','Noto Sans Kannada','Noto Sans Malayalam','Noto Sans Telugu',system-ui,sans-serif;}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&family=Noto+Sans+Malayalam:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap');
+:root {color-scheme: light;}
+.stApp {background:#F2F8F5; color:#14223F;}
+.stApp p, .stApp label, .stApp li, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp input, .stApp textarea,
+.hero, .rc, .note, .step, .stepper, .upd, .mini, .join, .foot {font-family:'Noto Sans','Noto Sans Tamil','Noto Sans Devanagari','Noto Sans Kannada','Noto Sans Malayalam','Noto Sans Telugu',system-ui,sans-serif;}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp p, .stApp label, .stApp li {color:#14223F;}
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {color:#3E4A63 !important; opacity:1 !important;}
 #MainMenu, footer {visibility:hidden;}
 header[data-testid="stHeader"] {background:transparent;}
-.block-container {max-width:760px; padding-top:1.1rem; padding-bottom:3rem;}
+.block-container {max-width:780px; padding-top:.8rem; padding-bottom:3rem;}
 
-/* ---- top banner ---- */
-.hero {position:relative; overflow:hidden; color:#fff; padding:18px 18px 16px;
-       background:linear-gradient(135deg, PRIMARY 0%, PRIMARYDARK 100%); border-radius:18px 18px 0 0;}
-.hero::after {content:""; position:absolute; right:-34px; top:-34px; width:150px; height:150px; border-radius:50%;
-              background:rgba(255,255,255,.07); box-shadow:0 0 0 20px rgba(255,255,255,.05), 0 0 0 42px rgba(255,255,255,.03);}
+/* ---------- inputs ---------- */
+.stApp input, .stApp textarea {background:#FFFFFF !important; color:#14223F !important; border-radius:10px;}
+[data-baseweb="select"] > div {background:#FFFFFF !important; color:#14223F !important; border:2px solid #5B6B84 !important; border-radius:10px !important;}
+[data-baseweb="select"] * {color:#14223F !important;}
+[data-baseweb="popover"], [data-baseweb="popover"] ul, [data-baseweb="popover"] li {background:#FFFFFF !important; color:#14223F !important;}
+[data-baseweb="popover"] li:hover, [data-baseweb="popover"] li[aria-selected="true"] {background:#E3F3EC !important;}
+
+/* ---------- top banner ---------- */
+.hero {position:relative; overflow:hidden; color:#FFFFFF; padding:18px 18px 16px;
+       background:linear-gradient(120deg, #14223F 0%, #0B6B49 100%); border-radius:20px 20px 0 0;}
+.hero::after {content:""; position:absolute; right:-40px; top:-40px; width:170px; height:170px; border-radius:50%;
+              background:rgba(255,255,255,.07); box-shadow:0 0 0 22px rgba(255,255,255,.05), 0 0 0 46px rgba(255,255,255,.03);}
 .hero-in {display:flex; align-items:center; position:relative; z-index:1;}
-.coin {flex:none; margin-right:14px; width:54px; height:54px; line-height:54px; text-align:center; border-radius:50%;
-       background:ACCENT; color:PRIMARY; font-size:1.8rem; font-weight:700;
-       box-shadow:0 0 0 4px rgba(255,255,255,.35), 0 4px 10px rgba(0,0,0,.25);}
-.logo {flex:none; margin-right:14px; width:66px; height:66px; border-radius:50%; background:#fff;
-        box-shadow:0 0 0 3px rgba(255,255,255,.55), 0 4px 12px rgba(0,0,0,.28);}
-.hero-t {font-size:1.7rem; font-weight:800; letter-spacing:.02em; line-height:1.2;}
-.hero-s {margin-top:2px; opacity:.95; font-size:1rem;}
+.logo {flex:none; margin-right:14px; width:70px; height:70px; border-radius:50%; background:#FFFFFF;
+       box-shadow:0 0 0 3px rgba(255,255,255,.6), 0 4px 12px rgba(0,0,0,.35);}
+.coin {flex:none; margin-right:14px; width:60px; height:60px; line-height:60px; text-align:center; border-radius:50%;
+       background:#FFFFFF; color:#0B6B49; font-size:1.9rem; font-weight:800;}
+.hero-t {font-size:1.9rem; font-weight:800; letter-spacing:.02em; line-height:1.15; color:#FFFFFF;}
+.hero-s {margin-top:3px; font-size:1.02rem; color:#FFFFFF;}
 .chips {display:flex; flex-wrap:wrap; margin-top:12px; position:relative; z-index:1;}
-.chips span {margin:0 8px 6px 0; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4); border-radius:999px;
-             padding:3px 11px; font-size:.82rem;}
-.border-strip {height:18px; margin-bottom:16px; border-radius:0 0 18px 18px; background-color:ACCENT;
+.chips span {margin:0 8px 6px 0; background:rgba(255,255,255,.14); border:1.5px solid rgba(255,255,255,.7);
+             border-radius:999px; padding:3px 11px; font-size:.84rem; color:#FFFFFF; font-weight:600;}
+.border-strip {height:18px; margin-bottom:12px; border-radius:0 0 20px 20px; background-color:ACCENT;
                background-image:PATTERN; background-repeat:repeat-x; background-position:center;}
 
-/* ---- tabs ---- */
-button[data-baseweb="tab"] {font-size:.98rem; font-weight:600; padding:10px 10px;}
-button[data-baseweb="tab"][aria-selected="true"] {color:PRIMARY;}
-div[data-baseweb="tab-highlight"] {background-color:PRIMARY;}
+/* ---------- little progress guide ---------- */
+.stepper {display:flex; flex-wrap:wrap; margin:0 0 10px;}
+.stepper span {margin:0 6px 6px 0; background:#FFFFFF; border:2px solid #14223F; border-radius:999px;
+               padding:3px 12px 3px 4px; font-weight:700; font-size:.84rem; color:#14223F;}
+.stepper b {display:inline-block; width:22px; height:22px; line-height:22px; text-align:center; border-radius:50%;
+            background:#14223F; color:#FFFFFF; margin-right:6px; font-size:.8rem;}
 
-/* ---- step headers ---- */
-.step {display:flex; align-items:center; margin:4px 0 6px;}
-.step-n {flex:none; margin-right:10px; width:32px; height:32px; border-radius:50%; background:PRIMARY; color:#fff; font-weight:700;
-         display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.2);}
-.step-t {font-weight:700; font-size:1.12rem;}
+/* ---------- tabs ---------- */
+div[data-baseweb="tab-list"] {background:#FFFFFF; padding:5px; border-radius:14px; border:2px solid #5B6B84; flex-wrap:wrap;}
+button[data-baseweb="tab"] {border-radius:10px; padding:8px 11px; font-weight:700; background:transparent;}
+button[data-baseweb="tab"] p {color:#14223F; font-weight:700; font-size:.95rem;}
+button[data-baseweb="tab"][aria-selected="true"] {background:#14223F;}
+button[data-baseweb="tab"][aria-selected="true"] p, button[data-baseweb="tab"][aria-selected="true"] * {color:#FFFFFF !important;}
+div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {display:none;}
 
-/* ---- answer buttons look like pills ---- */
-div[role="radiogroup"] {gap:8px; flex-wrap:wrap;}
-div[role="radiogroup"] > label {border:1.5px solid rgba(120,120,120,.45); border-radius:999px; padding:7px 15px;
-        background:#FFFFFF; color:#2B1B17; cursor:pointer; margin:0;}
-div[role="radiogroup"] > label:hover {border-color:PRIMARY;}
+/* ---------- cards ---------- */
+[data-testid="stVerticalBlockBorderWrapper"] {background:#FFFFFF; border-radius:18px;
+        border:2px solid #7A8CA0 !important; box-shadow:0 3px 10px rgba(20,34,63,.10);}
+.step {display:flex; align-items:center; margin:2px 0 10px; padding-bottom:6px; border-bottom:3px solid ACCENT;}
+.step-n {flex:none; margin-right:10px; width:34px; height:34px; border-radius:50%; background:#0B6B49; color:#FFFFFF;
+         font-weight:800; display:flex; align-items:center; justify-content:center;}
+.step-t {font-weight:800; font-size:1.18rem; color:#14223F;}
+
+/* ---------- answer pills ---------- */
+div[role="radiogroup"] {flex-wrap:wrap;}
+div[role="radiogroup"] > label {border:2px solid #5B6B84; border-radius:999px; padding:7px 15px; margin:0 8px 8px 0;
+        background:#FFFFFF; cursor:pointer;}
+div[role="radiogroup"] > label:hover {border-color:#14223F; background:#E3F3EC;}
 div[role="radiogroup"] > label > div:first-child {display:none;}
-div[role="radiogroup"] > label:has(input:checked) {background:PRIMARY; border-color:PRIMARY; box-shadow:0 2px 8px rgba(0,0,0,.2);}
-div[role="radiogroup"] > label:has(input:checked) * {color:#FFFFFF !important;}
-div[role="radiogroup"] > label p {font-size:1rem;}
+div[role="radiogroup"] > label p {font-size:1rem; font-weight:600; color:#14223F;}
+div[role="radiogroup"] > label:has(input:checked) {background:#0B6B49; border-color:#0B6B49; box-shadow:0 2px 8px rgba(0,0,0,.25);}
+div[role="radiogroup"] > label:has(input:checked) *, div[role="radiogroup"] > label:has(input:checked) p {color:#FFFFFF !important;}
 
-/* ---- big buttons ---- */
-.stButton > button, .stDownloadButton > button {width:100%; border-radius:12px; font-size:1.05rem; font-weight:600;
-        padding:.7rem 1rem; border:2px solid PRIMARY; color:PRIMARY; background:#FFFFFF;}
-.stButton > button:hover, .stDownloadButton > button:hover {background:PRIMARY; color:#FFFFFF; border-color:PRIMARY;}
-.stButton > button:disabled {opacity:.55;}
-[data-testid="stVerticalBlockBorderWrapper"] {border-radius:16px;}
+/* ---------- buttons ---------- */
+.stButton > button, .stDownloadButton > button {width:100%; border-radius:12px; font-size:1.05rem; font-weight:700;
+        padding:.7rem 1rem; background:#0B6B49; border:2px solid #0B6B49;}
+.stButton > button p, .stDownloadButton > button p {color:#FFFFFF !important; font-weight:700;}
+.stButton > button:hover, .stDownloadButton > button:hover {background:#14223F; border-color:#14223F;}
+.stButton > button:disabled {background:#DCE5E0; border-color:#DCE5E0;}
+.stButton > button:disabled p {color:#3E4A63 !important;}
 
-/* ---- result card ---- */
-.rc {border-radius:18px; padding:16px 18px 14px; margin:8px 0 12px; box-shadow:0 4px 14px rgba(0,0,0,.12);}
-.rc-under {background:#FFF1EC; color:#4A1D12; border-left:9px solid #C8553D;}
-.rc-fine {background:#EAF6EF; color:#123B2B; border-left:9px solid #2E7D5B;}
-.rc-unclear {background:#FFF6E3; color:#4A3300; border-left:9px solid #F2A541;}
-.rc-top {font-size:.85rem; letter-spacing:.04em; text-transform:uppercase; opacity:.75; font-weight:600;}
-.rc-amount {font-size:2.5rem; font-weight:800; line-height:1.15; margin:2px 0;}
-.rc-msg {font-size:1.02rem; font-weight:600;}
-.rc-bar {height:12px; background:rgba(0,0,0,.12); border-radius:999px; margin:12px 0 4px; overflow:hidden;}
-.rc-bar div {height:100%; border-radius:999px; background:PRIMARY;}
-.rc-pct {font-size:.88rem; opacity:.85;}
-.rc-grid {display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px;}
-.rc-grid div {background:rgba(255,255,255,.75); border-radius:12px; padding:8px 10px;}
-.rc-grid small {display:block; font-size:.74rem; opacity:.75;}
-.rc-grid b {font-size:1.02rem;}
+/* ---------- result: a pay-slip ---------- */
+.rc {position:relative; background:#FFFFFF; color:#14223F; border:2px solid #14223F; border-radius:18px;
+     padding:0 18px 14px; margin:10px 0 14px; box-shadow:0 6px 16px rgba(20,34,63,.18); overflow:hidden;}
+.rc-head {margin:0 -18px 10px; padding:9px 18px; background:#14223F; color:#FFFFFF; font-size:.85rem; font-weight:700;
+          letter-spacing:.08em; text-transform:uppercase;}
+.rc-amount {font-size:2.8rem; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; margin:4px 0 6px;}
+.rc-under .rc-amount {color:#B3261E;}
+.rc-fine .rc-amount {color:#0B6B49;}
+.rc-unclear .rc-amount {color:#8A4B00;}
+.rc-msg {padding:9px 12px; border-radius:12px; font-weight:700; font-size:1.02rem; margin-right:92px;}
+.rc-under .rc-msg {background:#FDECEA; color:#5C0F0A;}
+.rc-fine .rc-msg {background:#E4F5EC; color:#0B3B28;}
+.rc-unclear .rc-msg {background:#FFF4D6; color:#4A3300;}
+.stamp {position:absolute; right:16px; top:50px; transform:rotate(-9deg); background:#FFFFFF; border:3px solid; border-radius:8px;
+        padding:2px 10px; font-weight:800; font-size:1.05rem; letter-spacing:.06em; text-transform:uppercase;}
+.rc-under .stamp {color:#B3261E; border-color:#B3261E;}
+.rc-fine .stamp {color:#0B6B49; border-color:#0B6B49;}
+.rc-unclear .stamp {color:#8A4B00; border-color:#8A4B00;}
+.rc-bar {height:14px; background:#DCE5E0; border-radius:999px; margin:14px 0 4px; overflow:hidden;}
+.rc-bar div {height:100%; border-radius:999px; background:#14223F;}
+.rc-pct {font-size:.9rem; font-weight:600; color:#3E4A63;}
+.rc-rows {margin-top:10px;}
+.rc-row {display:flex; justify-content:space-between; padding:8px 0; border-bottom:2px dashed #7A8CA0; font-size:1rem;}
+.rc-row b {font-variant-numeric:tabular-nums;}
+.rc-row.total {border-bottom:none; font-size:1.12rem; font-weight:800;}
 
-/* ---- little totals cards ---- */
+/* ---------- small totals ---------- */
 .mini-grid {display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:8px 0;}
-.mini {background:#FFFFFF; color:#2B1B17; border-radius:14px; padding:10px 12px; border-top:5px solid PRIMARY;
-       box-shadow:0 2px 8px rgba(0,0,0,.1);}
-.mini small {display:block; font-size:.76rem; opacity:.75;}
-.mini b {font-size:1.2rem;}
-.mini-bad {border-top-color:#C8553D;}
+.mini {background:#FFFFFF; color:#14223F; border-radius:14px; padding:10px 12px; border:2px solid #7A8CA0; border-top:6px solid #0B6B49;}
+.mini small {display:block; font-size:.78rem; font-weight:600; color:#3E4A63;}
+.mini b {font-size:1.2rem; font-variant-numeric:tabular-nums;}
+.mini-bad {border-top-color:#B3261E;}
 
-/* ---- notes ---- */
-.note {border-radius:12px; padding:10px 14px; margin:8px 0; font-size:.95rem; line-height:1.5;}
+/* ---------- notes ---------- */
+.note {border-radius:12px; padding:10px 14px; margin:8px 0; font-size:.96rem; line-height:1.5; border:2px solid;}
 .note ul {margin:6px 0 2px 1.1rem; padding:0;}
-.note-warn {background:#FFF6E3; color:#4A3300; border:1px solid #F2C97A;}
-.note-info {background:#EAF1FA; color:#12304F; border:1px solid #B7CDE8;}
-.note-ok {background:#EAF6EF; color:#123B2B; border:1px solid #A9D6BC;}
+.note li, .note b {color:inherit !important;}
+.note-warn {background:#FFF4D6; color:#4A3300; border-color:#8A4B00;}
+.note-info {background:#E6EEF9; color:#0F2A4D; border-color:#3B5B8F;}
+.note-ok {background:#E4F5EC; color:#0B3B28; border-color:#0B6B49;}
 
-/* ---- updates + join button ---- */
-.join {display:block; text-align:center; text-decoration:none !important; color:#FFFFFF !important; font-weight:700;
-       background:#1FA855; padding:12px 16px; border-radius:14px; box-shadow:0 3px 10px rgba(0,0,0,.2); margin:6px 0 4px;}
-.upd {background:#FFFFFF; color:#2B1B17; border-radius:14px; padding:12px 14px; margin:10px 0;
-      border-left:7px solid ACCENT; box-shadow:0 2px 8px rgba(0,0,0,.1);}
-.upd .badge {display:inline-block; font-size:.75rem; font-weight:700; border-radius:999px; padding:2px 10px;
-             background:PRIMARY; color:#fff; margin-right:8px;}
-.upd .badge-incident {background:#C8553D;}
-.upd .when {font-size:.8rem; opacity:.7;}
-.upd p {margin:6px 0 2px; font-size:1rem; line-height:1.55;}
-.upd .src {font-size:.78rem; opacity:.65; word-break:break-all;}
-.foot {text-align:center; font-size:.8rem; opacity:.7; margin-top:10px;}
+/* ---------- updates + join button ---------- */
+.join {display:block; text-align:center; text-decoration:none !important; color:#FFFFFF !important; font-weight:800;
+       background:#0B6B49; padding:13px 16px; border-radius:14px; border:2px solid #14223F; margin:6px 0 4px;}
+.upd {background:#FFFFFF; color:#14223F; border-radius:14px; padding:12px 14px; margin:10px 0; border:2px solid #7A8CA0;
+      border-left:8px solid ACCENT;}
+.upd .badge {display:inline-block; font-size:.76rem; font-weight:800; border-radius:999px; padding:2px 10px;
+             background:#0B6B49; color:#FFFFFF; margin-right:8px;}
+.upd .badge-incident {background:#B3261E;}
+.upd .when {font-size:.82rem; font-weight:600; color:#3E4A63;}
+.upd p {margin:6px 0 2px; font-size:1rem; line-height:1.55; color:#14223F;}
+.upd .src {font-size:.8rem; color:#3E4A63; word-break:break-all;}
+.foot {text-align:center; font-size:.82rem; font-weight:600; color:#3E4A63; margin-top:10px;}
 </style>
 """
 
@@ -214,8 +258,7 @@ state_for_theme = st.session_state.get("sel_state", "Tamil Nadu")
 STATE_PRIMARY, ACCENT, PATTERN = THEMES.get(state_for_theme, THEMES["Tamil Nadu"])
 PRIMARY = BRAND
 st.markdown(
-    CSS.replace("PRIMARYDARK", darken(BRAND, 0.30)).replace("PRIMARY", BRAND)
-       .replace("ACCENT", ACCENT).replace("PATTERN", pattern_css(PATTERN, STATE_PRIMARY, ACCENT)),
+    CSS.replace("ACCENT", ACCENT).replace("PATTERN", pattern_css(PATTERN, STATE_PRIMARY, ACCENT)),
     unsafe_allow_html=True,
 )
 logo_html = (f'<img class="logo" src="{LOGO_URI}" alt="SahiPay logo">' if LOGO_URI
@@ -224,7 +267,9 @@ st.markdown(
     f'<div class="hero"><div class="hero-in">{logo_html}'
     f'<div><div class="hero-t">{esc(T("title"))}</div><div class="hero-s">{esc(T("tagline"))}</div></div></div>'
     f'<div class="chips"><span>⏱ {esc(T("chip_fast"))}</span><span>🔒 {esc(T("chip_private"))}</span>'
-    f'<span>✓ {esc(T("chip_free"))}</span></div></div><div class="border-strip"></div>',
+    f'<span>✓ {esc(T("chip_free"))}</span></div></div><div class="border-strip"></div>'
+    f'<div class="stepper"><span><b>1</b>{esc(T("step1"))}</span><span><b>2</b>{esc(T("step2"))}</span>'
+    f'<span><b>3</b>{esc(T("step3"))}</span><span><b>4</b>{esc(T("result_title"))}</span></div>',
     unsafe_allow_html=True,
 )
 
@@ -343,6 +388,7 @@ def letter_block(prefix, state, job, days, ot_hours, rate_low, effective_from, s
     with card():
         st.markdown(f"#### 📄 {T('letter_title')}")
         st.caption(T("letter_caption"))
+        st.caption("✍ " + T("letter_hand"))
         worker_name = st.text_input(T("name_label"), key=prefix + "_name")
         employer_name = st.text_input(T("employer_label"), key=prefix + "_employer")
         place = st.text_input(T("place_label"), key=prefix + "_place")
@@ -363,10 +409,133 @@ def before_you_file():
     callout("warn", f"<b>⚠ {esc(T('bf_title'))}</b><ul>{items}</ul>")
 
 
+
+# ---------------------------------------------------------------- voice: talk to the app, the app talks back
+VOICE_LANG = {"en": "en-IN", "ta": "ta-IN", "hi": "hi-IN", "kn": "kn-IN", "ml": "ml-IN", "te": "te-IN"}
+TTS_LANG = {"en": "en", "ta": "ta", "hi": "hi", "kn": "kn", "ml": "ml", "te": "te"}
+
+VOICE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "voice_component")
+# the microphone button (uses the phone's own speech recognition). If its folder is missing, typing still works.
+voice_input = components.declare_component("sahipay_voice", path=VOICE_DIR) if os.path.isdir(VOICE_DIR) else None
+
+
+@st.cache_data(show_spinner=False, max_entries=64)
+def tts_mp3(text, code):
+    """Make an audio recording of the text in the chosen language (Python gTTS tool)."""
+    from gtts import gTTS
+    buf = io.BytesIO()
+    gTTS(text=text, lang=code, tld="co.in" if code == "en" else "com").write_to_fp(buf)
+    return buf.getvalue()
+
+
+def device_voice(text):
+    """Backup: a button that reads the text with the voice already inside the phone or laptop."""
+    page = """<button id="b" style="width:100%;padding:12px;font-size:17px;font-weight:700;border-radius:12px;
+      border:2px solid #14223F;background:#FFFFFF;color:#14223F;cursor:pointer"></button>
+      <script>var t=__TEXT__;var b=document.getElementById('b');b.textContent=__LABEL__;
+      b.onclick=function(){speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='__LANG__';speechSynthesis.speak(u);};</script>"""
+    page = (page.replace("__TEXT__", json.dumps(text)).replace("__LABEL__", json.dumps("🔊 " + T("voice_device")))
+                .replace("__LANG__", VOICE_LANG[lang]))
+    components.html(page, height=64)
+
+
+def speak(text):
+    """Read the text aloud in the chosen language. If that fails, offer the device voice instead."""
+    try:
+        audio = tts_mp3(text, TTS_LANG[lang])
+        try:
+            st.audio(audio, format="audio/mp3", autoplay=True)
+        except TypeError:
+            st.audio(audio, format="audio/mp3")
+    except Exception:
+        callout("warn", f"⚠ {esc(T('voice_unavail'))}")
+        device_voice(text)
+
+
+def spoken_text(verdict_, lo_, hi_, paid_, exact_):
+    """The sentence the app says out loud for a result."""
+    should = int(round(lo_["total_due"]))
+    got = int(round(paid_))
+    if verdict_ == "fine":
+        return T("say_fine", should=should, got=got)
+    if verdict_ == "under" and exact_:
+        return T("say_under", should=should, got=got, missing=int(round(lo_["shortfall"])))
+    if verdict_ == "under":
+        return T("say_atleast", missing=int(round(lo_["shortfall"])))
+    return T("say_unclear")
+
+
+def voice_number(key, question, label, max_value, step):
+    """One spoken question: hear it, answer by voice (or type), and check the number."""
+    st.markdown(f"**{esc(question)}**")
+    if st.button("🔊 " + T("voice_hear_q"), key=f"hear_{key}"):
+        speak(question)
+    if voice_input is not None:
+        res = voice_input(lang=VOICE_LANG[lang], tap=T("voice_tap"), listening=T("voice_listening"),
+                          unsupported=T("voice_unsupported"), key=f"mic_{key}", default=None)
+        if isinstance(res, dict) and res.get("nonce") != st.session_state.get(f"nonce_{key}"):
+            st.session_state[f"nonce_{key}"] = res.get("nonce")          # handle each answer only once
+            st.session_state[f"heard_{key}"] = res.get("text", "")
+            st.session_state[f"err_{key}"] = bool(res.get("error") or res.get("unsupported"))
+            if res.get("text"):
+                found = parse_number(res["text"])
+                if found is None:
+                    st.session_state[f"err_{key}"] = "nonumber"
+                else:
+                    st.session_state[f"num_{key}"] = int(min(max(found, 0), max_value))   # set BEFORE the box is drawn
+    else:
+        callout("info", f"ℹ {esc(T('voice_unsupported'))}")
+    heard = st.session_state.get(f"heard_{key}")
+    if heard:
+        st.caption(T("voice_heard", text=heard))
+    if st.session_state.get(f"err_{key}") == "nonumber":
+        callout("warn", f"⚠ {esc(T('voice_nonumber'))}")
+    elif st.session_state.get(f"err_{key}"):
+        callout("warn", f"⚠ {esc(T('voice_error'))}")
+    st.caption(T("voice_check"))
+    return st.number_input(label, min_value=0, max_value=max_value, step=step, key=f"num_{key}")
+
+
+def voice_choice(key, question, candidates, names_now, selected_name, pending_name, pending_value):
+    """Pick the state or the work by SAYING it. candidates = [(value, [names in all languages])]."""
+    st.markdown(f"**{esc(question)}**")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🔊 " + T("voice_hear_q"), key=f"hear_{key}"):
+            speak(question)
+    with c2:
+        if st.button("🔊 " + T("voice_hear_choices"), key=f"choices_{key}"):
+            speak(", ".join(n.replace("/", ",") for n in names_now))
+    if voice_input is not None:
+        res = voice_input(lang=VOICE_LANG[lang], tap=T("voice_tap"), listening=T("voice_listening"),
+                          unsupported=T("voice_unsupported"), key=f"mic_{key}", default=None)
+        if isinstance(res, dict) and res.get("nonce") != st.session_state.get(f"nonce_{key}"):
+            st.session_state[f"nonce_{key}"] = res.get("nonce")          # handle each answer only once
+            st.session_state[f"heard_{key}"] = res.get("text", "")
+            st.session_state[f"err_{key}"] = bool(res.get("error") or res.get("unsupported"))
+            if res.get("text"):
+                value, _score = match_choice(res["text"], candidates)
+                if value is None:
+                    st.session_state[f"err_{key}"] = "nomatch"
+                else:
+                    st.session_state[pending_name] = pending_value(value)
+                    st.rerun()                                           # redraw with the new choice
+    else:
+        callout("info", f"ℹ {esc(T('voice_unsupported'))}")
+    heard = st.session_state.get(f"heard_{key}")
+    if heard:
+        st.caption(T("voice_heard", text=heard))
+    if st.session_state.get(f"err_{key}") == "nomatch":
+        callout("warn", f"⚠ {esc(T('voice_nomatch'))}")
+    elif st.session_state.get(f"err_{key}"):
+        callout("warn", f"⚠ {esc(T('voice_error'))}")
+    callout("ok", f"✓ {esc(T('voice_selected', name=selected_name))}")
+
+
 data = load_data()
 
-tab_check, tab_proof, tab_group, tab_rights, tab_about = st.tabs(
-    [f"🧾 {T('tab_check')}", f"📅 {T('tab_proof')}", f"👥 {T('tab_group')}",
+tab_check, tab_voice, tab_proof, tab_group, tab_rights, tab_about = st.tabs(
+    [f"🧾 {T('tab_check')}", f"🎤 {T('tab_voice')}", f"📅 {T('tab_proof')}", f"👥 {T('tab_group')}",
      f"📢 {T('tab_rights')}", f"ℹ️ {T('tab_about')}"]
 )
 
@@ -443,17 +612,24 @@ with tab_check:
     else:
         big, msg, missing_txt = "?", T("msg_unclear"), "?"
     kind = {"under": "under", "fine": "fine", "unclear": "unclear"}[verdict]
+    stamp = {"under": T("res_missing"), "fine": "✓", "unclear": "?"}[verdict]
     st.markdown(
         f'<div class="rc rc-{kind}" data-verdict="{kind}" data-should="{esc(should_txt)}" data-missing="{esc(missing_txt)}">'
-        f'<div class="rc-top">{esc(T("result_title"))}</div>'
+        f'<div class="rc-head">₹ {esc(T("result_title"))}</div>'
+        f'<div class="stamp">{esc(stamp)}</div>'
         f'<div class="rc-amount">{esc(big)}</div><div class="rc-msg">{esc(msg)}</div>'
         f'<div class="rc-bar"><div style="width:{pct_got:.0f}%"></div></div>'
         f'<div class="rc-pct">{esc(T("pct_got", pct=f"{pct_got:.0f}"))}</div>'
-        f'<div class="rc-grid"><div><small>{esc(T("res_should"))}</small><b>{esc(should_txt)}</b></div>'
-        f'<div><small>{esc(T("res_got"))}</small><b>{esc(money(paid))}</b></div>'
-        f'<div><small>{esc(T("res_missing"))}</small><b>{esc(missing_txt)}</b></div></div></div>',
+        f'<div class="rc-rows">'
+        f'<div class="rc-row"><span>{esc(T("res_should"))}</span><b>{esc(should_txt)}</b></div>'
+        f'<div class="rc-row"><span>{esc(T("res_got"))}</span><b>{esc(money(paid))}</b></div>'
+        f'<div class="rc-row total"><span>{esc(T("res_missing"))}</span><b>{esc(missing_txt)}</b></div>'
+        f'</div></div>',
         unsafe_allow_html=True,
     )
+
+    if st.button("🔊 " + T("voice_hear_result"), key="hear_main"):
+        speak(spoken_text(verdict, lo, hi, paid, exact))
 
     # ---------- notes about the numbers
     if exact:
@@ -506,6 +682,48 @@ with tab_check:
                 callout("ok", f"✓ {esc(T('share_thanks'))}")
         else:
             st.caption(T("share_not_now"))
+
+# =====================================================================================
+# TAB: talk to the app (voice in, voice out)
+# =====================================================================================
+with tab_voice:
+    st.markdown(f"### 🎤 {T('voice_title')}")
+    st.write(T("voice_intro"))
+    st.caption(T("proof_for", job=job_label(lang, job), state=state_label(lang, state)))
+    st.caption(T("voice_change"))
+
+    with card():
+        step_header(1, T("step1"))
+        voice_choice("state", T("vq_state"), [(x, [state_label(l, x) for l in ORDER]) for x in states],
+                     [state_label(lang, x) for x in states], state_label(lang, state), "pending_state", lambda v: v)
+        st.divider()
+        voice_choice("work", T("vq_work"), [(j, [job_label(l, j) for l in ORDER]) for j in jobs],
+                     [job_label(lang, j) for j in jobs], job_label(lang, job), "pending_job", lambda v: (state, v))
+    with card():
+        step_header(2, T("col_days"))
+        v_days = voice_number("days", T("q_days"), T("col_days"), 31, 1)
+    with card():
+        step_header(3, T("col_ot"))
+        v_ot = voice_number("ot", T("vq_ot"), T("col_ot"), 400, 1)
+    with card():
+        step_header(4, T("step3"))
+        v_paid = voice_number("paid", T("vq_paid"), T("col_paid"), 1000000, 100)
+
+    if v_days > 0:
+        lo_v, hi_v, verdict_v = calc_range(rate_low, rate_high, int(v_days), float(v_ot), float(v_paid))
+        if verdict_v == "fine":
+            callout("ok", f"✓ {esc(T('msg_fine'))}")
+        elif verdict_v == "under" and exact:
+            callout("warn", f"⚠ {esc(T('msg_under', amount=money(lo_v['shortfall'])))}")
+        elif verdict_v == "under":
+            callout("warn", f"⚠ {esc(T('msg_atleast', low=money(lo_v['shortfall']), high=money(hi_v['shortfall'])))}")
+        else:
+            callout("warn", f"⚠ {esc(T('msg_unclear'))}")
+        mini_cards([(T("res_should"), money(lo_v["total_due"]), False), (T("res_got"), money(v_paid), False),
+                    (T("res_missing"), money(max(lo_v["shortfall"], 0)) if verdict_v != "unclear" else "?",
+                     verdict_v == "under")])
+        if st.button("🔊 " + T("voice_hear_result"), key="hear_voice"):
+            speak(spoken_text(verdict_v, lo_v, hi_v, float(v_paid), exact))
 
 # =====================================================================================
 # TAB 2: month by month proof (arrears)
